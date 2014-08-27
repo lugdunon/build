@@ -1,0 +1,179 @@
+<project name="LugdunonBuildExample" default="buildDist">
+
+	<!-- THIS VALUE OF THIS PATH PROPERTY CAN BE LINKED TO THE BIN DIRECTORY OF A CURRENT LUGDUNON CLIENT OR SERVER DISTRIBUTION -->
+	<property name="lib"                      location="your lib path here"/>
+
+	<!-- ALL OF THESE ASSETS ARE AVAILABLE IN A CURRENT LUGDUNON CLIENT OR SERVER DISTRIBUTION -->
+	<property name="lugdunon"                 location="${lib}/lugdunon-server.jar"/>
+	<property name="jetty-continuation"       location="${lib}/jetty-continuation.jar"/>
+	<property name="jetty-http"               location="${lib}/jetty-http.jar"/>
+	<property name="jetty-io"                 location="${lib}/jetty-io.jar"/>
+	<property name="jetty-server"             location="${lib}/jetty-server.jar"/>
+	<property name="jetty-util"               location="${lib}/jetty-util.jar"/>
+	<property name="jetty-websocket"          location="${lib}/jetty-websocket.jar"/>
+	<property name="servlet-api"              location="${lib}/servlet-api-3.0.jar"/>
+	<property name="slf4j-api"                location="${lib}/slf4j-api-1.6.6.jar"/>
+	<property name="slf4j-jdk14"              location="${lib}/slf4j-jdk14-1.6.6.jar"/>
+	
+	<property name="classpath"                value   ="${lugdunon};${jetty-continuation};${jetty-http};${jetty-io};${jetty-server};${jetty-util};${jetty-websocket};${servlet-api};${slf4j-api};${slf4j-jdk14};"/>
+
+	<taskdef name    ="minify"                       classpath="../lib/lugdunon-build-tasks.jar;${classpath}" classname="net.lugdunon.task.ManifestTask"/>
+	<taskdef name    ="minify"                       classpath="../lib/lugdunon-build-tasks.jar;${classpath}" classname="net.lugdunon.task.MinifyTask"  />
+	<taskdef name    ="ldn"                          classpath="../lib/lugdunon-build-tasks.jar;${classpath}" classname="net.lugdunon.task.LDNTask"     />
+	<taskdef name    ="ldr"                          classpath="../lib/lugdunon-build-tasks.jar;${classpath}" classname="net.lugdunon.task.LDRTask"     />
+	
+	<property name="dist"                     location="../dist"/>
+	
+	<property name="yourWorldMod.src"         location="../src/yourWorldMod"/>
+	<property name="yourServerMod.src"        location="../src/yourServerMod"/>
+	
+	<property name="repo.ldr"                 location="${dist}/repository.ldr"/>
+	
+	<!--  -->
+
+	<property name="dist.mod"          location="${dist}/mod/"/>
+
+	<property name="yourWorldMod.ldn"         location="${dist.mod}/your.world.mod.jar.ldn"/>
+	<property name="yourWorldMod.jar"         location="${dist.mod}/your.world.mod.jar"/>
+	<property name="dist.yourWorldMod"        location="${dist.mod}/yourWorldMod"/>
+	<property name="dist.yourWorldMod.src"    location="${dist.yourWorldMod}/src"/>
+	<property name="yourWorldMod.classes"     location="${dist.yourWorldMod}/classes"/>
+	
+	<!--  -->
+	
+	<property name="dist.server.mod"   location="${dist}/server.mod/"/>
+
+	<property name="yourServerMod.ldn"           location="${dist.server.mod}/your.server.mod.jar.ldn"/>
+	<property name="yourServerMod.jar"           location="${dist.server.mod}/your.server.mod.jar"/>
+	<property name="dist.yourServerMod"          location="${dist.server.mod}/yourServerMod"/>
+	<property name="dist.yourServerMod.src"      location="${dist.yourServerMod}/src"/>
+	<property name="yourServerMod.classes"       location="${dist.yourServerMod}/classes"/>
+	
+	
+	<!-- ######################################################################################################## -->
+	
+	
+	<target name="init">
+		<delete dir="${dist}"/>
+		<mkdir  dir="${dist}"/>
+		
+		<!--  -->
+
+		<mkdir  dir="${dist.yourWorldMod}"/>
+		<mkdir  dir="${dist.yourWorldMod.src}"/>
+		<mkdir  dir="${yourWorldMod.classes}"/>
+		
+		<!--  -->
+
+		<mkdir  dir="${dist.yourServerMod}"/>
+		<mkdir  dir="${dist.yourServerMod.src}"/>
+		<mkdir  dir="${yourServerMod.classes}"/>
+	</target>
+	
+	<target name="compile" depends="init">
+		
+		<!--MODS-->
+
+		<copy todir="${dist.yourWorldMod.src}">
+			<fileset dir="${yourWorldMod.src}"/>
+		</copy>
+
+		<copy todir="${yourWorldMod.classes}">
+			<fileset dir="${dist.yourWorldMod.src}">
+				<exclude name="**/*.java"/>
+			</fileset>
+		</copy>
+		
+		<javac srcdir   ="${dist.yourWorldMod.src}"
+		       destdir  ="${yourWorldMod.classes}"
+		       classpath="${classpath};${server.classes}"
+		       debug    ="on"
+	           target   ="1.7"
+		/>
+		
+		<!--SERVER MODS-->
+		
+		<copy todir="${dist.yourServerMod.src}">
+			<fileset dir="${yourServerMod.src}"/>
+		</copy>
+				
+		<copy todir="${yourServerMod.classes}">
+			<fileset dir="${yourServerMod.src}">
+				<exclude name="**/*.java"/>
+			</fileset>
+		</copy>
+		
+		<javac srcdir   ="${dist.yourServerMod.src}"
+		       destdir  ="${yourServerMod.classes}"
+		       classpath="${classpath};${server.classes}"
+		       debug    ="on"
+	           target   ="1.7"
+		/>
+		
+	</target>
+	
+	<target name="debugBuild" unless="release" depends="compile">
+
+	</target>
+	
+	<target name="minifyForRelease" if="release" depends="compile">
+		
+		<!--MODS-->
+
+		<minify dir="${yourWorldMod.classes}" />
+		
+		<!--SERVER MODS-->
+
+		<minify dir="${yourServerMod.classes}"   />
+
+	</target>
+	
+	<target name="buildJar" depends="minifyForRelease,debugBuild">
+
+		<!-- MODS -->
+
+		<jar destfile="${yourWorldMod.jar}">
+			<fileset dir="${yourWorldMod.classes}"/>
+			<manifest>
+				<attribute name="Lugdunon-Asset-Provider" value="true"/>
+			</manifest>
+		</jar>
+		
+		<!--SERVER MODS-->
+		
+		<jar destfile="${yourServerMod.jar}">
+			<fileset dir="${yourServerMod.classes}"/>
+			<manifest>
+				<attribute name="Lugdunon-Asset-Provider" value="true"/>
+			</manifest>
+		</jar>
+
+	</target>
+	
+	<target name="buildDist" depends="buildJar">
+		
+		<!-- LDN GENERATION -->
+
+		<!-- MODS -->
+		
+		<ldn archive="${yourWorldMod.jar}"  ldnFile="${yourWorldMod.ldn}" modName="mod.json"/>
+		
+		<!--SERVER MODS-->
+
+		<ldn archive="${yourServerMod.jar}"    ldnFile="${yourServerMod.ldn}"   modName="server.mod.json"/>
+		
+		<!-- CREATE REPOSITORY MANIFEST -->
+
+		<ldr 
+			humanReadable   ="true"
+			repoFileLocation="${repo.ldr}"
+			serverModsPath  ="${dist.server.mod}"
+		    modsPath        ="${dist.mod}"
+		    serverModBaseUrl="REPOSITORY SERVER MOD URL HERE"
+		    modBaseUrl      ="REPOSITORY WORLD MOD URL HERE"
+			name            ="REPOSITORY NAME HERE"
+			description     ="REPOSITORY DESCRIPTION HERE"
+	    />
+	</target>
+	
+</project>
